@@ -1,0 +1,136 @@
+extends layout
+
+block content
+    script(src="/socket.io/socket.io.js")
+    script.
+        (function () {
+            'use strict';
+            $(document).ready(function () {
+                var socket = io();
+                var files = {};
+
+                $('#youtube_dl').on('click', function (e) {
+                    e.preventDefault();
+
+                    socket.emit('try_download', $('#youtube_dl_input').val());
+                });
+
+                $('#wget').on('click', function (e) {
+                    e.preventDefault();
+
+                    socket.emit('download_files', $('#wget_input').val());
+                });
+
+                $('#media').on('click', function (e) {
+                    e.preventDefault();
+                    socket.emit('start_media');
+                });
+
+                socket.on('media_ok', function () {
+                    swal({
+                        title: 'Успешно!',
+                        text: 'Серверы запущены.',
+                        type: 'info',
+                        showConfirmButton: true
+                    });
+                });
+
+                socket.on('youtube_dl_download', function () {
+                    swal({
+                        title: 'Обработка!',
+                        text: 'Запрос обрабатывается',
+                        type: 'info',
+                        showConfirmButton: false
+                    });
+                });
+
+                socket.on('youtube_dl_error', function (message) {
+                    swal({
+                        title: 'Ошибка!',
+                        text: message,
+                        type: 'error'
+                    });
+                });
+
+                socket.on('youtube_dl_start_download', function () {
+                    swal({
+                        title: '',
+                        text: 'Загрузка началась.',
+                        type: 'success'
+                    });
+                });
+
+                socket.on('youtube_dl_progress', function (file) {
+                    files[file.filename] = file;
+                    var youtubeDlList = $('#youtube_dl_list')
+                    youtubeDlList.empty();
+
+                    var fileList = '';
+
+                    for (var key in files) {
+                        fileList += '<tr><td>' + files[key].filename + '</td><td>' +
+                                Math.round(files[key].size / 1024 / 1024, 2) + '</td><td>' +
+                                Math.round(files[key].download / 1024 / 1024, 2) + '</td><td>' +
+                                Math.round((files[key].download / files[key].size) * 100, 2) + '%</td></tr>'
+                    }
+
+                    youtubeDlList.append(fileList);
+                });
+            })
+        })();
+
+    .well
+        button.btn.btn-default#media Включить медиасерверы
+
+    .well
+        h3 Скачать с youtube и прочих сервисов.
+        form
+            .form-group
+                label Ссылка на файл.
+                input.form-control#youtube_dl_input(placeholder='URL')
+            button.btn.btn-default#youtube_dl Скачать
+            table.table
+                thead
+                    tr
+                        td Имя
+                        td Размер, Мб
+                        td Скачано, Мб
+                        td
+                tbody#youtube_dl_list
+
+    .well
+        h3 Загрузить файл по URL
+        form
+            .form-group
+                label Ссылка на файл.
+                input.form-control#wget_input(placeholder='URL')
+            button.btn.btn-default#wget Скачать
+            table.table
+                thead
+                    tr
+                        td Имя
+                        td Размер, Мб
+                        td Скачано, Мб
+                        td
+                tbody#wget_list
+
+    .well
+        h3 Загрузить torrent-файл.
+        label Перетащите
+        form.dropzone(action='/upload/dropzone')#zone1
+            .fallback
+                input(type='file' name='file')
+
+    script.
+        Dropzone.options.zone1 = {
+            paramName: "file",
+            dictDefaultMessage: 'Перетащите файл, или нажмите для выбора файла'
+        };
+
+    .well
+        h3 Загрузить torrent с kinozal и rutracker
+        form
+            .form-group
+                label Ссылка на раздачу.
+                input.form-control#tracker_dl_input(placeholder='URL')
+            button.btn.btn-default#tracker_dl Скачать
