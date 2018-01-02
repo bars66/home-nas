@@ -5,12 +5,99 @@ const fs = require('fs');
 const config = require('./config.json');
 const download = require('download');
 const spawn = require('child_process').spawn;
+const request = require('request-promise');
+
+const cookieStore = request.jar();
+
+const services = [
+  {
+    name: 'Kinozal.tv - torrent',
+    url: 'kinozal',
+
+    ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.108 Safari/537.36',
+    download: async (service, cookieStore, url) => {
+      if (!service.init) {
+        throw new Error('Service is not initializad');
+      }
+
+      const cookie = cookieStore.getCookieString('http://kinozal.me/');
+      const urlparsed = url.match(/details.php\?id=(\d*)/);
+      if (urlparsed.length !== 2) {
+        throw new Error('Неправильный урл. Ожидается details.php?id=XXXXXXX');
+      }
+      const filePath = `${config['rtorrent_auto_dir']}`;
+
+      const options = {
+        headers: {
+          cookie,
+          'User-Agent': service.ua
+        },
+        filename: `kinozal-tv-${urlparsed[1]}.torrent`,
+    	}
+      await download(`http://dl.kinozal.me/download.php?id=${urlparsed[1]}`, filePath, options);
+    },
+    auth: async (service, cookieStore) => {
+      try {
+        const optionsInit = {
+          url: 'http://kinozal.me/',
+          jar: cookieStore,
+          headers: {
+            'User-Agent': service.ua
+          }
+        };
+        await request.get(optionsInit);
+        const authOptions = {
+          url: 'http://kinozal.me/takelogin.php',
+          jar: cookieStore,
+          headers: {
+            'User-Agent': service.ua
+          },
+          form: {
+            username: service.login,
+            password: service.password,
+            returnto: '',
+          }
+        }
+        try {
+          await request.post(authOptions);
+        } catch (error) {
+          if (error.responseCode > 400) {
+            throw new Error(error);
+          }
+        }
+        service.init = true;
+      } catch (error) {
+        console.log('Error where init kinozal source: ', error);
+      }
+    }
+  }
+]
+async function initStores() {
+  for (let i = 0; i != services.length; ++i) {
+    services[i] = Object.assign(services[i], config.sources[services[i].name]);
+    await services[i].auth(services[i], cookieStore);
+  }
+
+}
+initStores();
 
 function io(io) {
     io.on('connection', function(socket){
         console.log('connect');
 
-        socket.on('try_download', function (url) {
+        socket.on('try_download', async function (url) {
+            const service = services.find(service => url.includes(service.url));
+            if (service) {
+              console.log('START: ', service.name, url);
+              io.emit('youtube_dl_start_download');
+              try {
+                await service.download(service, cookieStore, url);
+              } catch (error) {
+                io.emit('youtube_dl_error', error.message);
+              }
+              return;
+            }
+
             socket.emit('youtube_dl_download');
             ytdl.getInfo(url, function getInfo(error, info) {
                 if (error) {
@@ -107,4 +194,3 @@ function io(io) {
 }
 
 module.exports = io;
-
