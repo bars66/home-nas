@@ -151,7 +151,7 @@ block content
                   });
 
                   request.fail(function( jqXHR, textStatus ) {
-                    alert( "Request failed: " + textStatus );
+                    console.log( "Request failed: " + textStatus );
                   });
                 }
                 updateTorrent();
@@ -259,6 +259,13 @@ block content
                         td
                 tbody#youtube_dl_list
 
+
+    .well
+        h3 Торрент-трекеры
+        p
+          a(href="http://kinozal.me/" target="_blank") Кинозал
+
+
     .well
         h3 Загрузить файл по URL
         form
@@ -287,11 +294,3 @@ block content
             paramName: "file",
             dictDefaultMessage: 'Перетащите файл, или нажмите для выбора файла'
         };
-
-    .well
-        h3 Загрузить torrent с kinozal и rutracker
-        form
-            .form-group
-                label Ссылка на раздачу.
-                input.form-control#tracker_dl_input(placeholder='URL')
-            button.btn.btn-default#tracker_dl Скачать
