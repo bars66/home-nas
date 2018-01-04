@@ -17,7 +17,7 @@ const services = [
     ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.108 Safari/537.36',
     download: async (service, cookieStore, url) => {
       if (!service.init) {
-        throw new Error('Service is not initializad');
+        throw new Error('Service is not initialized');
       }
 
       const cookie = cookieStore.getCookieString('http://kinozal.me/');
@@ -66,6 +66,61 @@ const services = [
           }
         }
         service.init = true;
+        console.log('Kinozal init');
+      } catch (error) {
+        console.log('Error where init kinozal source: ', error);
+      }
+    }
+  },
+  {
+    name: 'koshara',
+    url: 'koshara',
+
+    ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.108 Safari/537.36',
+    download: async (service, cookieStore, url) => {
+      if (!service.init) {
+        throw new Error('Service is not initialized');
+      }
+
+      const options = {
+        url,
+        jar: cookieStore,
+        headers: {
+          'User-Agent': service.ua
+        }
+      };
+
+      const answer = await request.get(options);
+      const torrentUrls = answer.match(/engine\/download.php\?id=(\d*)/);
+      if (!torrentUrls || torrentUrls.length !== 2) {
+        throw new Error('Похоже на странице нет торрент-файлов. Облом.');
+      }
+
+      const filePath = `${config['rtorrent_auto_dir']}`;
+      const cookie = cookieStore.getCookieString('http://koshara.co/');
+
+      const optionsDownload = {
+        headers: {
+          cookie,
+          'User-Agent': service.ua
+        },
+        filename: `koshara-${torrentUrls[1]}.torrent`,
+    	}
+      await download(`http://koshara.co/${torrentUrls[0]}`, filePath, optionsDownload);
+    },
+    auth: async (service, cookieStore) => {
+      try {
+        const optionsInit = {
+          url: 'http://koshara.co/',
+          jar: cookieStore,
+          headers: {
+            'User-Agent': service.ua
+          }
+        };
+        await request.get(optionsInit);
+        // Просто сходим, пусть кука будет
+        service.init = true;
+        console.log('Coshara init');
       } catch (error) {
         console.log('Error where init kinozal source: ', error);
       }
