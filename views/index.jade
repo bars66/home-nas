@@ -3,11 +3,159 @@ extends layout
 block content
     script(src="/socket.io/socket.io.js")
     script.
+        function iv(val) {
+          return Number(val); // заглушка
+        }
+        function addLeadingZero(n) {
+          if (n < 10) {
+            return '0' + n;
+          }
+
+          return n;
+        }
+        function bytesToSize(bytes) {
+          var sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+          if (bytes == 0) return 'n/a';
+          var i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
+          if (i == 0) return bytes + ' ' + sizes[i];
+          return (bytes / Math.pow(1024, i)).toFixed(1) + ' ' + sizes[i];
+        }
+        var dStatus = 0;
+        function secondsToString(seconds) {
+         var numhours = Math.floor(seconds / 3600);
+         var numminutes = Math.floor((((seconds % 31536000) % 86400) % 3600) / 60);
+         var numseconds = (((seconds % 31536000) % 86400) % 3600) % 60;
+
+         return addLeadingZero(numhours) + ':' + addLeadingZero(numminutes) + ':' + addLeadingZero(numseconds);
+
+         }
+
         (function () {
             'use strict';
             $(document).ready(function () {
                 var socket = io();
                 var files = {};
+                function updateTorrent() {
+                  var request = $.ajax({
+                    url: "/rutorrent/plugins/httprpc/action.php",
+                    method: "POST",
+                    data: { mode : 'list' },
+                    dataType: "json"
+                  });
+
+                  request.done(function(torrents) {
+                    if (!torrents || !torrents.t) return;
+
+                    torrents = torrents.t;
+
+                    for (var hash in torrents) {
+                      var values = torrents[hash];
+                      var torrent = {};
+                      var state = 0;
+                      var is_open = iv(values[0]);
+                      var is_hash_checking = iv(values[1]);
+                      var is_hash_checked = iv(values[2]);
+                      var get_state = iv(values[3]);
+                      var get_hashing = iv(values[23]);
+                      var is_active = iv(values[28]);
+                      torrent.msg = values[29];
+                      if(is_open!=0)
+                      {
+                        state|=dStatus.started;
+                        if((get_state==0) || (is_active==0))
+                          state|=dStatus.paused;
+                      }
+                      if(get_hashing!=0)
+                        state|=dStatus.hashing;
+                      if(is_hash_checking!=0)
+                        state|=dStatus.checking;
+                      if(torrent.msg.length && torrent.msg!="Tracker: [Tried all trackers.]")
+                        state|=dStatus.error;
+                      torrent.state = state;
+                      torrent.name = values[4];
+                      torrent.size = bytesToSize(values[5]);
+                      torrent.sizeRaw = values[5];
+
+                      var get_completed_chunks = iv(values[6]);
+                      var get_hashed_chunks = iv(values[24]);
+                      var get_size_chunks = iv(values[7]);
+                      var chunks_processing = (is_hash_checking==0) ? get_completed_chunks : get_hashed_chunks;
+                      torrent.done = Math.floor(chunks_processing/get_size_chunks*1000);
+                      torrent.downloaded = bytesToSize(values[8]);
+                      torrent.downloadedRaw = (values[8]);
+
+                      torrent.uploaded = bytesToSize(values[9]);
+                      torrent.ratio = iv(values[10]);
+                      torrent.ul = iv(values[11]);
+                      torrent.dlRaw = Number(values[12]);
+                      torrent.dl = bytesToSize(iv(values[12])) + '/s';
+                      if (torrent.dl === 'n/a/s') torrent.dl = '---';
+                      var get_chunk_size = iv(values[13]);
+                      torrent.eta = (torrent.dlRaw>0) ? secondsToString(Math.floor((get_size_chunks-get_completed_chunks)*get_chunk_size/torrent.dlRaw)) : '';
+                      try {
+                      torrent.label = $.trim(decodeURIComponent(values[14]));
+                      } catch(e) { torrent.label = ''; }
+
+                      if(torrent.label.length>0)
+                      {
+                        if(!$type(ret.labels[torrent.label]))
+                        {
+                          ret.labels[torrent.label] = 1;
+                          ret.labels_size[torrent.label] = parseInt(torrent.size);
+                        }
+                        else
+                        {
+                          ret.labels[torrent.label]++;
+                          ret.labels_size[torrent.label] = parseInt(ret.labels_size[torrent.label]) + parseInt(torrent.size);
+                        }
+                      }
+
+                      var get_peers_not_connected = iv(values[16]);
+                      var get_peers_connected = iv(values[17]);
+                      var get_peers_all = get_peers_not_connected+get_peers_connected;
+                      torrent.peers_actual = values[15];
+                      torrent.peers_all = get_peers_all;
+                      torrent.seeds_actual = values[18];
+                      torrent.seeds_all = get_peers_all;
+                      torrent.remaining = values[19];
+                      torrent.priority = values[20];
+                      torrent.state_changed = values[21];
+                      torrent.skip_total = values[22];
+                      torrent.base_path = values[25];
+                      var pos = torrent.base_path.lastIndexOf('/');
+                      torrent.save_path = (torrent.base_path.substring(pos+1) === torrent.name) ?
+                        torrent.base_path.substring(0,pos) : torrent.base_path;
+                      torrent.created = values[26];
+                      torrent.tracker_focus = values[27];
+                      try {
+                      torrent.comment = values[30];
+                      if(torrent.comment.search("VRS24mrker")==0)
+                        torrent.comment = decodeURIComponent(torrent.comment.substr(10));
+                      } catch(e) { torrent.comment = ''; }
+                      torrent.free_diskspace = values[31];
+                      torrent.private = values[32];
+                      torrent.multi_file = iv(values[33]);
+                      torrent.seeds = torrent.seeds_actual + " (" + torrent.seeds_all + ")";
+                      torrent.peers = torrent.peers_actual + " (" + torrent.peers_all + ")";
+
+                      torrents[hash] = torrent;
+                    }
+                    var torrentsArray = Object.values(torrents);
+                    console.log(torrentsArray)
+                    var torrentsStr = torrentsArray.reverse().filter(function(torrent) {return torrent.downloadedRaw !== torrent.sizeRaw}).map(function(torrent) {
+                      return `<tr><td>${torrent.name}</td><td>${torrent.size}</td><td>${torrent.dl}</td><td>${torrent.eta}</td><td>${torrent.downloaded}</td></tr>`
+                    })
+                    var torrentDlList = $('#torrent_dl_list')
+                    torrentDlList.empty();
+                    torrentDlList.append(torrentsStr);
+                  });
+
+                  request.fail(function( jqXHR, textStatus ) {
+                    alert( "Request failed: " + textStatus );
+                  });
+                }
+                updateTorrent();
+                setInterval(updateTorrent, 1500);
 
                 $('#youtube_dl').on('click', function (e) {
                     e.preventDefault();
@@ -81,6 +229,19 @@ block content
 
     .well
         button.btn.btn-default#media Включить медиасерверы
+
+    .well
+      h3 Торренты
+      table.table
+          thead
+              tr
+                  td Имя
+                  td Размер
+                  td Скорость
+                  td Осталось времени
+                  td Скачано
+          tbody#torrent_dl_list
+
 
     .well
         h3 Скачать с youtube и прочих сервисов.
