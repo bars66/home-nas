@@ -136,9 +136,32 @@ async function initStores() {
 }
 initStores();
 
+let TVs = {
+  zal: {
+    channels: [],
+  }
+}
+
+
+setInterval(async () => {
+  const options = {
+    uri: 'http://192.168.40.61:1925/1/channels',
+    json: true,
+  };
+  try {
+    TVs.zal.channels = await request.get(options);
+  } catch(error) {
+    TVs.zal.channels = [];
+  }
+}, 5000);
+
 function io(io) {
     io.on('connection', function(socket){
         console.log('connect');
+
+        socket.on('getChannels', function () {
+          socket.emit('TVs', TVs);
+        })
 
         socket.on('try_download', async function (url) {
             const service = services.find(service => url.includes(service.url));
@@ -244,6 +267,24 @@ function io(io) {
                 uri: 'http://192.168.40.61:1925/1/input/key',
                 body: {
                     key: button
+                },
+                json: true // Automatically stringifies the body to JSON
+              }
+              try {
+                await request(options);
+              } catch (error) {
+                console.log(error);
+              }
+            }
+        });
+
+        socket.on('philips-control-channel', async function (type, id) {
+            if (type === 'zal') {
+              const options = {
+                method: 'POST',
+                uri: 'http://192.168.40.61:1925/1/channels/current',
+                body: {
+                    id: id
                 },
                 json: true // Automatically stringifies the body to JSON
               }

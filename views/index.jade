@@ -189,6 +189,29 @@ block content
                     });
                 });
 
+                socket.on('TVs', function (TVs) {
+                    var channels = TVs.zal.channels;
+
+                    var s = '';
+                    for (var key in channels) {
+                      s += '<li><a href="#" class="js-channel-list" data-type="zal" data-id="' + key + '">' + channels[key].name + '</a></li>';
+                    }
+
+                    var TVZalList = $('#TVZal')
+                    TVZalList.empty();
+                    TVZalList.append(s);
+                });
+
+                $("#TVZal").on('click', '.js-channel-list', function(e) {
+                  e.preventDefault();
+                  socket.emit('philips-control-channel', $(this).attr('data-type'), $(this).attr('data-id'));
+                })
+
+                setInterval(() => {
+                  socket.emit('getChannels');
+                }, 2500);
+                socket.emit('getChannels');
+
                 socket.on('youtube_dl_download', function () {
                     swal({
                         title: 'Обработка!',
@@ -308,7 +331,8 @@ block content
           button(class="btn btn-default js-tv-control" data-type="zal" data-command="ChannelStepDown") ChannelStepDown
           br
           button(class="btn btn-default js-tv-control" data-type="zal" data-command="Standby") Standby
-
+        div
+          ul#TVZal
     script.
         Dropzone.options.zone1 = {
             paramName: "file",
