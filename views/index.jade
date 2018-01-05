@@ -169,6 +169,12 @@ block content
                     socket.emit('download_files', $('#wget_input').val());
                 });
 
+                $('.js-tv-control').on('click', function (e) {
+                    e.preventDefault();
+
+                    socket.emit('philips-control', $(this).attr('data-type'), $(this).attr('data-command'));
+                });
+
                 $('#media').on('click', function (e) {
                     e.preventDefault();
                     socket.emit('start_media');
@@ -290,6 +296,18 @@ block content
         form.dropzone(action='/upload/dropzone')#zone1
             .fallback
                 input(type='file' name='file')
+
+    .well
+        h3 TV Зал (*.61)
+        div#tv_zal
+          button(class="btn btn-default js-tv-control" data-type="zal" data-command="Mute") Mute
+          button(class="btn btn-default js-tv-control" data-type="zal" data-command="VolumeUp") VolumeUp
+          button(class="btn btn-default js-tv-control" data-type="zal" data-command="VolumeDown") VolumeDown
+          br
+          button(class="btn btn-default js-tv-control" data-type="zal" data-command="ChannelStepUp") ChannelStepUp
+          button(class="btn btn-default js-tv-control" data-type="zal" data-command="ChannelStepDown") ChannelStepDown
+          br
+          button(class="btn btn-default js-tv-control" data-type="zal" data-command="Standby") Standby
 
     script.
         Dropzone.options.zone1 = {

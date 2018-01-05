@@ -237,6 +237,24 @@ function io(io) {
             // })
         });
 
+        socket.on('philips-control', async function (type, button) {
+            if (type === 'zal') {
+              const options = {
+                method: 'POST',
+                uri: 'http://192.168.40.61:1925/1/input/key',
+                body: {
+                    key: button
+                },
+                json: true // Automatically stringifies the body to JSON
+              }
+              try {
+                await request(options);
+              } catch (error) {
+                console.log(error);
+              }
+            }
+        });
+
         socket.on('start_media', function () {
             const m = spawn('systemctl', ['start', 'mediatomb']);
             const m1 = spawn('systemctl', ['start', 'mediatomb_new']);
