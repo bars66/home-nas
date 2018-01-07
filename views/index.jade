@@ -191,6 +191,13 @@ block content
 
                 socket.on('TVs', function (TVs) {
                     var channels = TVs.zal.channels;
+                    if (!channels || !channels.length) {
+                      $( "#TVZalPlaceholder" ).removeClass( 'hidden' );
+                      $( "#TVZalmain" ).addClass( 'hidden' );
+                    } else {
+                      $( "#TVZalPlaceholder" ).addClass( 'hidden' );
+                      $( "#TVZalmain" ).removeClass( 'hidden' );
+                    }
 
                     var s = '';
                     for (var key in channels) {
@@ -323,17 +330,21 @@ block content
 
     .well
         h3 TV Зал (*.61)
-        div#tv_zal
-          button(class="btn btn-default js-tv-control" data-type="zal" data-command="Mute") Mute
-          button(class="btn btn-default js-tv-control" data-type="zal" data-command="VolumeUp") VolumeUp
-          button(class="btn btn-default js-tv-control" data-type="zal" data-command="VolumeDown") VolumeDown
-          br
-          button(class="btn btn-default js-tv-control" data-type="zal" data-command="ChannelStepUp") ChannelStepUp
-          button(class="btn btn-default js-tv-control" data-type="zal" data-command="ChannelStepDown") ChannelStepDown
-          br
-          button(class="btn btn-default js-tv-control" data-type="zal" data-command="Standby") Standby
-        div
-          ul#TVZal
+        div#TVZalmain.hidden
+          div#tv_zal
+            button(class="btn btn-default js-tv-control" data-type="zal" data-command="Mute") Mute
+            button(class="btn btn-default js-tv-control" data-type="zal" data-command="VolumeUp") VolumeUp
+            button(class="btn btn-default js-tv-control" data-type="zal" data-command="VolumeDown") VolumeDown
+            br
+            button(class="btn btn-default js-tv-control" data-type="zal" data-command="ChannelStepUp") ChannelStepUp
+            button(class="btn btn-default js-tv-control" data-type="zal" data-command="ChannelStepDown") ChannelStepDown
+            br
+            button(class="btn btn-default js-tv-control" data-type="zal" data-command="Standby") Standby
+          div
+            ul#TVZal
+        div#TVZalPlaceholder
+          p
+            Похоже телевизор отключен или нет подключения к Wi-Fi
     .well
         h3 Медиасерверы
         pre#mediatombStatus
