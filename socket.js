@@ -6,8 +6,21 @@ const config = require('./config.json');
 const download = require('download');
 const spawn = require('child_process').spawn;
 const request = require('request-promise');
+const { exec } = require('child_process');
 
 const cookieStore = request.jar();
+
+let mediatombStatus = 'No connect to systemctl';
+
+setInterval(() => {
+  exec('echo Mediatomb: && systemctl status mediatomb | grep Active && echo Mediatomb Old TV && systemctl status mediatomb_old1 | grep Active', (err, stdout, stderr) => {
+    if (err) {
+      return;
+    }
+    mediatombStatus = stdout;
+  });
+}, 20000);
+
 
 const services = [
   {
@@ -161,7 +174,10 @@ function io(io) {
 
         socket.on('getChannels', function () {
           socket.emit('TVs', TVs);
-        })
+        });
+        socket.on('getMediatombStatus', function () {
+          socket.emit('MediatombStatus', mediatombStatus);
+        });
 
         socket.on('try_download', async function (url) {
             const service = services.find(service => url.includes(service.url));
@@ -297,10 +313,20 @@ function io(io) {
         });
 
         socket.on('start_media', function () {
+          try {
             const m = spawn('systemctl', ['start', 'mediatomb']);
-            const m1 = spawn('systemctl', ['start', 'mediatomb_new']);
+            const m1 = spawn('systemctl', ['start', 'mediatomb_old1']);
+            m1.on('error', error => {
+              console.log('Error m1', error);
+            })
+            m.on('error', error => {
+              console.log('Error m', error);
+            })
             socket.emit('media_ok');
             console.log('ok');
+          } catch (error) {
+            console.log(error);
+          }
         });
 
         socket.on('disconnect', function(){});

@@ -194,7 +194,7 @@ block content
 
                     var s = '';
                     for (var key in channels) {
-                      s += '<li><a href="#" class="js-channel-list" data-type="zal" data-id="' + key + '">' + channels[key].name + '</a></li>';
+                      s += '<li><a href="#" class="js-channel-list" data-type="zal" data-id="' + key + '">' + channels[key].name || key + '</a></li>';
                     }
 
                     var TVZalList = $('#TVZal')
@@ -211,6 +211,17 @@ block content
                   socket.emit('getChannels');
                 }, 2500);
                 socket.emit('getChannels');
+
+                setInterval(() => {
+                  socket.emit('getMediatombStatus');
+                }, 2500);
+                socket.emit('getMediatombStatus');
+
+                socket.on('MediatombStatus', function (mediatombStatus) {
+                    var mStatus = $('#mediatombStatus')
+                    mStatus.empty();
+                    mStatus.append(mediatombStatus);
+                });
 
                 socket.on('youtube_dl_download', function () {
                     swal({
@@ -255,9 +266,6 @@ block content
                 });
             })
         })();
-
-    .well
-        button.btn.btn-default#media Включить медиасерверы
 
     .well
       h3 Торренты
@@ -314,13 +322,6 @@ block content
                 tbody#wget_list
 
     .well
-        h3 Загрузить torrent-файл.
-        label Перетащите
-        form.dropzone(action='/upload/dropzone')#zone1
-            .fallback
-                input(type='file' name='file')
-
-    .well
         h3 TV Зал (*.61)
         div#tv_zal
           button(class="btn btn-default js-tv-control" data-type="zal" data-command="Mute") Mute
@@ -333,6 +334,11 @@ block content
           button(class="btn btn-default js-tv-control" data-type="zal" data-command="Standby") Standby
         div
           ul#TVZal
+    .well
+        h3 Медиасерверы
+        pre#mediatombStatus
+        button.btn.btn-default#media Включить медиасерверы
+
     script.
         Dropzone.options.zone1 = {
             paramName: "file",
