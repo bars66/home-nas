@@ -191,7 +191,7 @@ block content
 
                 socket.on('TVs', function (TVs) {
                     var channels = TVs.zal.channels;
-                    if (!channels || !channels.length) {
+                    if (!channels || !Object.keys(channels).length) {
                       $( "#TVZalPlaceholder" ).removeClass( 'hidden' );
                       $( "#TVZalmain" ).addClass( 'hidden' );
                     } else {
